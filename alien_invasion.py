@@ -2,7 +2,7 @@ import sys
 import pygame # type: ignore
 from settings import Settings
 from ship import Ship
-
+from bullet import Bullet
 
 class AlienInvasion:
     """Overall class to mnage the game's assets and behavior"""
@@ -12,19 +12,18 @@ class AlienInvasion:
         pygame.init()
         self.clock = pygame.time.Clock()
         self.settings = Settings() # Create the instance of settings 
-
-
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        self.settings.screen_width = self.screen.get_rect().width
+        self.settings.screen_height = self.screen.get_rect().height
         self.screen = pygame.display.set_mode(
             (self.settings.screen_width, self.settings.screen_height) # Create the screen 
         )
-
         # Create a display window with dimensions being 1200 by 800 pixels 
         # and assign it to self.screen
         self.screen = pygame.display.set_mode((1200, 800))
         pygame.display.set_caption("Alien Invasion")
-
         self.ship = Ship(self) # Make instance of Ship 
-
+        self.bullets = pygame.sprite.Group()
         # Set the background color 
         self.bg_color = (230, 230, 230)
     # Game is controlled by this function 
@@ -33,6 +32,14 @@ class AlienInvasion:
         while True:
             self._check_events()
             self.ship.update()
+            self.bullets.update()
+            
+            # Get rid of bullets that have disappeared
+            for bullet in self.bullets.copy():
+                 if bullet.rect.bottom <= 0: # If bullet has left off screen, remove from bullets list 
+                      self.bullets.remove(bullet) 
+            print(len(self.bullets)) # Print to show many bullets are currently in the game
+
             self._update_screen()
             self.clock.tick(60)
 
@@ -42,33 +49,50 @@ class AlienInvasion:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     sys.exit()
-                elif event.type == pygame.KEYDOWN: # Respond when key is actually pressed down 
-                    if event.key == pygame.K_RIGHT: # Check whether the right key is pressed
-                         self.ship.moving_right = True
-                    elif event.key == pygame.K_LEFT:
-                         self.ship.moving_left = True
-
+                elif event.type == pygame.KEYDOWN:
+                    self._check_keydown_events(event)
                 elif event.type == pygame.KEYUP:
-                    if event.key == pygame.K_RIGHT:
-                        self.ship.moving_right = False
-                    elif event.key == pygame.K_LEFT:
-                        self.ship.moving_left = False
-                          # Move ship to the right
-                        self.ship.rect.x += 1 # If right key is pressed, ship moves to the right 
+                    self._check_keyup_events(event)
+    def _check_keydown_events(self, event):
+            """Respond to keypresses"""
+            if event.key == pygame.K_RIGHT:
+                 self.ship.moving_right = True
+            elif event.key == pygame.K_LEFT:
+                self.ship.moving_left = True
+            elif event.key == pygame.K_q:
+                 sys.exit()
+            elif event.key == pygame.K_SPACE: # Bullets are fired with spacebar
+                 self._fire_bullet()
+
+    def _check_keyup_events(self, event):
+            """Responded to key releases"""
+            if event.key == pygame.K_RIGHT:
+                self.ship.moving_right = False
+            elif event.key == pygame.K_LEFT:
+                self.ship.moving_left = False 
             # Fill the screen with the background color with the fill() method 
-            self.screen.fill(self.bg_color)
+          
+
+    def _fire_bullet(self):
+         """Create a new bullet and add it to the bullets group"""
+         new_bullet = Bullet(self) # Make instance of bullet 
+         self.bullets.add(new_bullet) # add method to add it to the group bullets
+
+
 
 
     def _update_screen(self):
             """Update images on the screen and flip to the new """
             # Access background color when filling up the screen 
             self.screen.fill(self.settings.bg_color)
-
+            for bullet in self.bullets.sprites():  # Loop through the sprites in bullets and call draw_bullet
+                 bullet.draw_bullet()
             self.ship.blitme()
 
             # Make the most recently drawn game visible 
             pygame.display.flip()
             self.clock.tick(60)
+            self.screen.fill(self.bg_color) 
 if __name__ == '__main__':
     # Make a game instance and run the game
     ai = AlienInvasion()
